@@ -25,18 +25,31 @@ function renderHome() {
   const buttonContainer = document.createElement('div');
   buttonContainer.className = 'button-container';
 
-  buttonContainer.appendChild(createButton('All Project', 'all-project', () => navigateTo('/dashboard')));
-  buttonContainer.appendChild(createButton('CNGH', 'cngh', () => navigateTo('/dashboard/CNGH')));
-  buttonContainer.appendChild(createButton('Ftech', 'ftech', () => navigateTo('/dashboard/Ftech')));
-  
-// It simulates multiple organizations by passing a comma-separated list of organization names in the URL.
-// Example: '/dashboard/CNGH project,Ftech'
-// Replace or remove this button in production and pass actual organization names dynamically
-  buttonContainer.appendChild(createButton('CNGH + Ftech', 'multi-org', () => {
-    const orgs = encodeURIComponent('CNGH project') + ',' + encodeURIComponent('Ftech');
-    navigateTo(`/dashboard/${orgs}`);
+  buttonContainer.appendChild(createButton('All Project', 'all-project', () => {
+    sessionStorage.removeItem('selectedOrgs'); // clear org selection
+    navigateTo('/dashboard');
   }));
 
+
+  buttonContainer.appendChild(createButton('CNGH', 'cngh', () => {
+    const orgs = ['CNGH project'];
+    sessionStorage.setItem('selectedOrgs', JSON.stringify(orgs));
+    navigateTo('/dashboard');
+  }));
+
+  buttonContainer.appendChild(createButton('Ftech', 'ftech', () => {
+    const orgs = ['Ftech'];
+    sessionStorage.setItem('selectedOrgs', JSON.stringify(orgs));
+    navigateTo('/dashboard');
+  }));
+
+  buttonContainer.appendChild(createButton('CNGH + Ftech', 'multi-org', () => {
+    const orgs = ['CNGH project', 'Ftech'];
+    sessionStorage.setItem('selectedOrgs', JSON.stringify(orgs));
+    navigateTo('/dashboard');
+  }));
+
+  // Upload Excel
   buttonContainer.appendChild(createButton('Upload Excel', 'upload', () => navigateTo('/upload')));
 
   container.appendChild(buttonContainer);
@@ -145,13 +158,14 @@ async function router() {
   if (path === '/' || path === '/home') {
     app.appendChild(renderHome());
   } else if (path.startsWith('/dashboard')) {
-    const parts = path.split('/');
-    let orgName = parts.length > 2 ? decodeURIComponent(parts[2]) : null;
-
-    // If multiple orgs passed, split into array
-    if (orgName && orgName.includes(',')) {
-      orgName = orgName.split(',').map(o => o.trim());
-    }
+  // Try to get org names from sessionStorage
+  let orgName = null;
+  const storedOrgs = sessionStorage.getItem('selectedOrgs');
+  if (storedOrgs) {
+    const parsed = JSON.parse(storedOrgs);
+    orgName = parsed.length === 1 ? parsed[0] : parsed;
+   
+  }
 
     await renderDashboard(orgName);
   } else if (path === '/upload') {
