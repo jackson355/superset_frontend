@@ -26,12 +26,20 @@ function renderHome() {
   buttonContainer.className = 'button-container';
 
   buttonContainer.appendChild(createButton('All Project', 'all-project', () => navigateTo('/dashboard')));
-  buttonContainer.appendChild(createButton('CNGH', 'cngh', () => navigateTo('/dashboard/CNGH%20project')));
+  buttonContainer.appendChild(createButton('CNGH', 'cngh', () => navigateTo('/dashboard/CNGH')));
   buttonContainer.appendChild(createButton('Ftech', 'ftech', () => navigateTo('/dashboard/Ftech')));
+  
+// It simulates multiple organizations by passing a comma-separated list of organization names in the URL.
+// Example: '/dashboard/CNGH project,Ftech'
+// Replace or remove this button in production and pass actual organization names dynamically
+  buttonContainer.appendChild(createButton('CNGH + Ftech', 'multi-org', () => {
+    const orgs = encodeURIComponent('CNGH project') + ',' + encodeURIComponent('Ftech');
+    navigateTo(`/dashboard/${orgs}`);
+  }));
+
   buttonContainer.appendChild(createButton('Upload Excel', 'upload', () => navigateTo('/upload')));
 
   container.appendChild(buttonContainer);
-
   return container;
 }
 
@@ -49,15 +57,16 @@ async function getGuestToken(orgName) {
     });
 
     if (!loginResponse.ok) throw new Error(`Login failed: ${loginResponse.status}`);
-
     const loginData = await loginResponse.json();
     const accessToken = loginData.access_token;
 
-    const rlsClauses = orgName
-      ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((id) => ({
-          dataset: id,
-          clause: `organization_name = '${orgName}'`,
-        }))
+    const rlsClauses = orgName && (Array.isArray(orgName) ? orgName.length > 0 : true)
+      ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((id) => {
+          const clause = Array.isArray(orgName)
+            ? `organization_name IN (${orgName.map(name => `'${name}'`).join(", ")})`
+            : `organization_name = '${orgName}'`;
+          return { dataset: id, clause };
+        })
       : [];
 
     const guestTokenPayload = {
@@ -137,7 +146,13 @@ async function router() {
     app.appendChild(renderHome());
   } else if (path.startsWith('/dashboard')) {
     const parts = path.split('/');
-    const orgName = parts.length > 2 ? decodeURIComponent(parts[2]) : null;
+    let orgName = parts.length > 2 ? decodeURIComponent(parts[2]) : null;
+
+    // If multiple orgs passed, split into array
+    if (orgName && orgName.includes(',')) {
+      orgName = orgName.split(',').map(o => o.trim());
+    }
+
     await renderDashboard(orgName);
   } else if (path === '/upload') {
     app.appendChild(renderUploadPage());

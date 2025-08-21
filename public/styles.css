@@ -49,7 +49,9 @@ body {
 .button.ftech {
   background-color: #ff9800;
 }
-
+.button.multi-org{
+  background-color: #9c27b0;
+}
 .button.upload {
   background-color: #9c27b0;
 }
